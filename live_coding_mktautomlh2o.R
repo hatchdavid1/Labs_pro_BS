@@ -24,3 +24,6 @@ h2o.init()
 
 ###### h2o data preparation ######
 # Converting string to columns to factor type
+data_joined_tbl  <- data_joined_tbl %>%
+    mutate_if(is.character, as.factor)
+
