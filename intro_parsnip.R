@@ -48,8 +48,22 @@ pricing_model_tbl  <- price_vs_weight_tbl %>%
 # Quick vire to pricing model tbl
 pricing_model_tbl
 
+### Data Splitting ###
+# Setting the seed
+set.seed(1)
+# Splitting the set into 80/20 proportion to train and test
+split_obj  <- rsample::initial_split(pricing_model_tbl, prop = .8, 
+                                     strata='ModelBase' ) 
 
+# Splitting into train and test sets using pre load functions training & testing
+train_tbl  <- split_obj %>% training()
+test_tbl  <- split_obj %>% testing()
 
+### Machine Learning with parsnip #### 
+### Linear Regression ###
+?linear_reg # Step 1 Picking a parsnip algorithm and setting parameters
+?set_engine # Step 2 Set an engine, Retunrs a model spec
+?fit.model_spec # Step 3 Fit model specifications to data
 
 
 
