@@ -26,4 +26,18 @@ returns_m_components_tbl  <- c('BAC', 'CAT', 'CPNG', 'DIS', 'ECL', 'FICO', 'KOF'
                mutate_fun = periodReturn, period = 'monthly',
                col_rename = 'ret', type = 'log') %>%
   ungroup()
+#### Original version 
+# returns_m_components_tbl <- c("AAPL", "GOOG", "NFLX") %>%
+#   tq_get(get  = "stock.prices",
+#          from = start,
+#          to   = end) %>%
+#   group_by(symbol) %>%
+#   tq_transmute(select     = adjusted, 
+#                mutate_fun = periodReturn, 
+#                period     = "monthly") %>%
+#   ungroup()
+
+
+returns_m_components_tbl
+
 
