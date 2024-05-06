@@ -2,6 +2,7 @@
 #### Loading main Libraries #### 
 library(tidyquant)
 library(tidyverse)
+library(dplyr)
 library(plotly)
 library(furrr)
 
@@ -74,7 +75,7 @@ returns_m_tbl %>%
     x = "", y = "Annualized Sharpe Ratio (Rf = 0%)"
   )
 
-#### Portolio Aggregation  ####
+#### Portfolio Aggregation  ####
 
 wts_tbl  <- returns_m_components_tbl %>%
   distinct(symbol) %>%
@@ -84,12 +85,101 @@ wts_tbl  <- returns_m_components_tbl %>%
 wts_tbl
 
 returns_m_portfolio_tbl <- returns_m_components_tbl %>%
-  tq_portfolio(symbol, RA, 
+  tq_portfolio(symbol, monthly.returns, 
                weights = wts_tbl,
                rebalance_on = "quarters",
                col_rename   = "monthly.returns"
   )
 
 returns_m_portfolio_tbl
+
+#### Performance Analysis and Portfolio ####
+returns_m_portfolio_merged_m_tbl  <- returns_m_portfolio_tbl %>% 
+  add_column(symbol = 'Portfolio', .before = 1) %>%
+  bind_rows(returns_m_benchmark_tbl)
+
+returns_m_portfolio_merged_m_tbl %>% 
+  group_by(symbol) %>% 
+  tq_performance(monthly.returns, 
+                 performance_fun = SharpeRatio.annualized, 
+                scale = 12)
+
+#### Optimization #### 
+# Getting Random Portfolio weights
+weight_iterator <- function(assets, iter = 100, seed = NULL) {
+  
+  n <- length(assets)
+  
+  if (!is.null(seed)) set.seed(seed)
+  mtx <- matrix(runif(n = iter*n, min = 0, max = 1), nrow = 12)
+  
+  mtx_normalized <- mtx %*% diag(1/colSums(mtx))
+  
+  vectorized_output <- as.vector(mtx_normalized)
+  
+  return(vectorized_output)
+  
+}
+
+# Inputs
+assets <- c('BAC', 'CAT', 'CPNG', 'DIS', 'ECL', 'FICO', 'KOF', 'ONON', 'STLA', 'VLTO', 'WFC', 'WM')
+iter  <- 250
+
+# Generating Random Portfolios
+weights_tbl <- tibble(
+  portfolio_id = rep(1:iter, each = length(assets)),
+  symbol  = rep(assets, times = iter),
+  weights = weight_iterator(assets, iter = iter, seed = 123) 
+) %>%
+  group_by(portfolio_id)
+
+# Calculating Performance for each portfolio 
+plan("multisession")
+# Original -> plan(multiprocess)
+portfolio_optim_tbl <- weights_tbl %>%
+  #nest(.key = portfolio_weights) %>% # .key is deprecated (all this did was name the new column)
+  nest() %>%
+  rename(portfolio_weights = data) %>%
+  
+  # Map tq_portfolio() to nested weights
+  mutate(portfolio_agg = furrr::future_pmap(portfolio_weights, ~ tq_portfolio(
+    data = returns_m_components_tbl,
+    assets_col  = symbol, 
+    returns_col = monthly.returns,
+    weights     = .x,
+    rebalance_on = "quarters"
+  ))) %>%
+  
+  # Map tq_performance() to nested portfolio aggregations
+  mutate(sharp_ratio = map(portfolio_agg, ~ tq_performance(
+    data = .x,
+    Ra = portfolio.returns,
+    performance_fun = SharpeRatio.annualized,
+    scale = 12
+  ))) 
+
+portfolio_optim_tbl
+
+
+best_portfolio_tbl <- portfolio_optim_tbl %>%
+  unnest(sharp_ratio) %>%
+  filter(`AnnualizedSharpeRatio(Rf=0%)` == max(`AnnualizedSharpeRatio(Rf=0%)`)) 
+
+best_portfolio_tbl %>%
+  select(portfolio_id, `AnnualizedSharpeRatio(Rf=0%)`)
+
+best_portfolio_tbl %>%
+  pull(portfolio_weights) %>%
+  pluck(1)
+
+
+portfolio_optim_flattened_tbl <- portfolio_optim_tbl %>%
+  select(-portfolio_agg) %>%
+  unnest(sharp_ratio) %>%
+  unnest(portfolio_weights) %>%
+  spread(symbol, weights) %>%
+  rename(SharpeRatio = `AnnualizedSharpeRatio(Rf=0%)`)
+
+portfolio_optim_flattened_tbl
 
 
