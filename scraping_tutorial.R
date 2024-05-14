@@ -62,6 +62,15 @@ electric_tbl <- tibble(
 
 electric_tbl
 
+
+bike_category_nids_tbl <- bind_rows(
+    road_bikes_tbl, mountain_bikes_tbl, urban_fitness_tbl, electric_tbl) %>%
+    mutate(
+        url = str_glue("https://www.cannondale.com/en/USA/Products/ProductCategory.aspx?nid={nid}")
+    )
+
+bike_category_nids_tbl
+
 #### Examine Product Family Page #### 
 url <- "https://www.cannondale.com/en/USA/Products/ProductCategory.aspx?nid=85bbe445-6160-4420-b7ff-e602ddeda578"
 xopen(url)
@@ -92,7 +101,8 @@ get_bike_ids(url)
 
 #### Scale up to all Product Categories #### 
 plan("multisession")
-
+bike_ids_tbl  <- bike_category_nids_tbl %>% 
+    mutate(bike_ids = future_map(url, get_bike_ids))
 
 
 
