@@ -62,3 +62,57 @@ electric_tbl <- tibble(
 
 electric_tbl
 
+#### Examine Product Family Page #### 
+url <- "https://www.cannondale.com/en/USA/Products/ProductCategory.aspx?nid=85bbe445-6160-4420-b7ff-e602ddeda578"
+xopen(url)
+
+html <- read_html(url)
+
+html
+
+product_id_tbl <- html %>% 
+    html_nodes(".relatedProducts") %>%
+    html_attr("id") %>%
+    enframe(name = "position", value = "product_id") %>%
+    mutate(url = str_glue("https://www.cannondale.com/en/USA/Bike/ProductDetail?Id={product_id}&parentid=undefined"))
+
+product_id_tbl
+
+#### Function to get Bike IDs
+get_bike_ids  <- function(url){
+    read_html(url) %>%
+        html_nodes(".relatedProducts") %>%
+        html_attr("id") %>%
+        enframe(name = 'position', value = 'product_id') %>%
+        mutate(url = str_glue("https://www.cannondale.com/en/USA/Bike/ProductDetail?Id={product_id}&parentid=undefined"))
+}
+
+get_bike_ids(url)
+
+
+#### Scale up to all Product Categories #### 
+plan("multisession")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
