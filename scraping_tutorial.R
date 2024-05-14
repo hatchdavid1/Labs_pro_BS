@@ -62,7 +62,7 @@ electric_tbl <- tibble(
 
 electric_tbl
 
-
+#### Combining product Families ####
 bike_category_nids_tbl <- bind_rows(
     road_bikes_tbl, mountain_bikes_tbl, urban_fitness_tbl, electric_tbl) %>%
     mutate(
@@ -88,12 +88,13 @@ product_id_tbl <- html %>%
 product_id_tbl
 
 #### Function to get Bike IDs
-get_bike_ids  <- function(url){
+get_bike_ids <- function(url) {
     read_html(url) %>%
         html_nodes(".relatedProducts") %>%
         html_attr("id") %>%
-        enframe(name = 'position', value = 'product_id') %>%
+        enframe(name = "position", value = "product_id") %>%
         mutate(url = str_glue("https://www.cannondale.com/en/USA/Bike/ProductDetail?Id={product_id}&parentid=undefined"))
+    
 }
 
 get_bike_ids(url)
@@ -101,16 +102,128 @@ get_bike_ids(url)
 
 #### Scale up to all Product Categories #### 
 plan("multisession")
-bike_ids_tbl  <- bike_category_nids_tbl %>% 
+bike_ids_tbl <- bike_category_nids_tbl %>%
     mutate(bike_ids = future_map(url, get_bike_ids))
 
+bike_ids_tbl
+
+bike_ids_tbl <- bike_ids_tbl %>%
+    select(-url) %>%
+    unnest(bike_ids)
+
+#### Webscrape the bikes information #### 
+
+url <- "https://www.cannondale.com/en/USA/Bike/ProductDetail?Id=794906db-5bb4-4c36-b6dd-a98682c57be0&parentid=undefined"
+xopen(url)
+
+read_html(url) %>%
+    html_nodes(".productTitleHeader") %>%
+    html_text()
+
+read_html(url) %>%
+    html_nodes(".price") %>%
+    html_text()
+
+read_html(url) %>%
+    html_nodes("#componentBox") %>%
+    html_nodes(".overview") %>%
+    html_nodes(".cell") %>%
+    html_nodes("h4") %>%
+    map(html_text) %>%
+    unlist()
+
+read_html(url) %>%
+    html_nodes("#componentBox") %>%
+    html_nodes(".overview") %>%
+    html_nodes(".cell") %>%
+    html_nodes("p") %>%
+    map(html_text) %>%
+    unlist() %>%
+    str_remove_all("\n") %>%
+    str_remove_all("\r") %>%
+    str_trim()
+
+#### Function to get bike Features #### 
+get_bike_features <- function(url) {
+    
+    bike_name <- read_html(url) %>%
+        html_nodes(".productTitleHeader") %>%
+        html_text() %>%
+        str_remove_all("\r") %>%
+        str_remove_all("\n")
+    
+    price <- read_html(url) %>%
+        html_nodes(".price") %>%
+        html_text()
+    
+    features <- read_html(url) %>%
+        html_nodes("#componentBox") %>%
+        html_nodes(".overview") %>%
+        html_nodes(".cell") %>%
+        html_nodes("h4") %>%
+        map(html_text) %>%
+        unlist()
+    
+    feature_descriptions <- read_html(url) %>%
+        html_nodes("#componentBox") %>%
+        html_nodes(".overview") %>%
+        html_nodes(".cell") %>%
+        html_nodes("p") %>%
+        map(html_text) %>%
+        unlist() %>%
+        str_remove_all("\n") %>%
+        str_remove_all("\r") %>%
+        str_trim()
+    
+    tibble(
+        features = features,
+        description = feature_descriptions
+    ) %>%
+        add_row(features = "Price", description = price, .before = 1) %>%
+        add_row(features = "Model", description = bike_name, .before = 1)
+    
+}
+
+get_bike_features(url)
+
+#### Scale all bike features ### 
+bike_features_raw_tbl <- bike_ids_tbl %>%
+    mutate(bike_features = map(url, get_bike_features))
+
+## Parallel Process with furrr 
+plan('multisession')
+bike_features_raw_tbl <- bike_ids_tbl %>%
+    mutate(bike_features = future_map(url, get_bike_features))
+
+
+#### Creating Directory #### 
+fs::dir_create("data")
+bike_features_raw_tbl %>% write_rds("data/bike_features_raw_tbl1.rds")
+
+bike_features_raw_tbl <- read_rds("data/bike_features_raw_tbl1.rds")
+
+##### Post Processing the Directories #### 
+cannondale_bikes_2019_tbl <- bike_features_raw_tbl %>%
+    select(-url) %>%
+    unnest() %>%
+    mutate(
+        category = as_factor(category),
+        product_family = as_factor(product_family),
+        features = as_factor(features)) %>%
+    spread(key = features, value = description) %>%
+    rename(ProductFamily = product_family,
+           WebsitePosition = position,
+           ProductId = product_id) %>%
+    rename_all(~str_remove_all(., " "))
+
+cannondale_bikes_2019_tbl
 
 
 
+cannondale_bikes_2019_tbl %>%
+    write_csv("data/cannondale_bikes_20191.csv")
 
-
-
-
+read_csv("data/cannondale_bikes_20191.csv")
 
 
 
