@@ -27,7 +27,7 @@ final_grade_max  <- 100
 course_grade_max  <- 70
 
 #### OMPR Optimization Model #### 
-sum_prod_exam_1_3. <- sum(exam_grades_tbl$grade[1:3] * exam_grades_tbl$weight[1:3])
+sum_prod_exam_1_3 <- sum(exam_grades_tbl$grade[1:3] * exam_grades_tbl$weight[1:3])
 
 tic()
 model  <- MIPModel() %>%
@@ -42,16 +42,18 @@ model
 get_solution(model, final_grade) %>% enframe()
 
 
+#### ROI Version ####
 
+model_lp <- OP(
+    objective   = L_objective(L = 1, names = "final_grade"),
+    constraints = rbind(
+        L_constraint(L = exam_grades_tbl$weight[4], dir = "==", course_grade_max - sum_prod_exam_1_3),
+        L_constraint(L = 1, "<=", 100),
+        L_constraint(L = 1, ">=", 0)
+    ), 
+    maximum = FALSE
+)
 
+sol <- ROI_solve(model_lp, "glpk")
 
-
-
-
-
-
-
-
-
-
-
+solution(sol)
