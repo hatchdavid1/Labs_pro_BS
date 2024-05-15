@@ -14,7 +14,7 @@ library(tictoc)
 
 
 #### Data ####  BBY  CCI  EBAY  JOE  ORCL  VLTO
-assets <- c ('BBY'  ,'CCI'  ,'EBAY'  ,'JOE'  ,'ORCL'  ,'VLTO') %>% sort()
+assets <- c ("META", "AMZN", "AAPL", "GOOG", "NFLX") %>% sort()
 
 stock_prices_tbl  <- tq_get(assets, from = '2022-01-01', to = '2024-01-01')
 stock_return_tbl  <- stock_prices_tbl %>%
@@ -44,20 +44,37 @@ calc_portfolio_variance  <- function(weights){
     t(weights) %*% (cov_mtx %*% weights) %>% as.vector()
 }
 
-calc_portfolio_variance(c(1,0,0,0,0, 0))
+calc_portfolio_variance(c(1,0,0,0,0))
 
 calc_portfolio_return  <- function(weights){
     stats  <- stats_tbl$mean
     sum(stats * weights)
 }
 
-calc_portfolio_return(c(1,0,0,0,0,0))
+calc_portfolio_return(c(1,0,0,0,0))
 
+#### Objective #### 
+n_assets <- length(assets)
 
+model_nlp <- OP(
+    objective   = F_objective(F = calc_portfolio_variance, n = n_assets, names = assets),
+    constraints = rbind(
+        F_constraint(F = calc_portfolio_return, dir = ">=", rhs = 0.40),
+        
+        L_constraint(diag(n_assets), rep(">=", n_assets), rep(0, n_assets)),
+        L_constraint(diag(n_assets), rep("<=", n_assets), rep(1, n_assets)),
+        L_constraint(rep(1, n_assets), "==", 1)
+    ),
+    maximum = FALSE
+)
 
+tic()
+sol <- ROI_solve(model_nlp, solver = "alabama", start = rep(1/n_assets, n_assets))
+toc()
 
+sol$objval
 
-
+solution(sol) %>% round(2)
 
 
 
