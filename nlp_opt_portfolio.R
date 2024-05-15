@@ -146,14 +146,86 @@ plot_heatmap <- function(data) {
 portfolio_sim_result_tbl %>% plot_heatmap()
 
 
+plot_efficient_frontier <- function(data) {
+    
+    portfolio_metrics_tbl <- data %>%
+        select(return_constraint, portfolio_return, portfolio_stdev)
+    
+    stock_weights_tbl <- data %>%
+        select(-c(return_constraint, portfolio_return, portfolio_stdev))
+    
+    stock_text <- names(stock_weights_tbl) %>%
+        map(~ str_c(.x, stock_weights_tbl %>% pull(.x) %>% scales::percent(),
+                    sep = ": ")) %>%
+        set_names(names(stock_weights_tbl)) %>%
+        as_tibble() %>%
+        mutate(stock_text = str_c(!!! syms(names(stock_weights_tbl)), sep = "\n")) %>%
+        pull(stock_text)
+        
+    
+    g <- portfolio_metrics_tbl %>%
+        mutate(sharpe_ratio = portfolio_return / portfolio_stdev) %>%
+        mutate(label_text = str_glue("Return Objective: {scales::percent(return_constraint)}
+                                     Portfolio Return: {scales::percent(portfolio_return)}
+                                     Portfolio Sharpe: {round(sharpe_ratio, 2)}
+                                     Portfolio StdDev: {round(portfolio_stdev, 2)}
+                                     ---")) %>%
+        mutate(label_text = str_c(label_text, stock_text, sep = "\n")) %>% 
+        
+        ggplot(aes(x = portfolio_stdev, y = portfolio_return, 
+                   color = sharpe_ratio, size = sharpe_ratio)) +
+        geom_point(aes(text = label_text)) +
+        expand_limits(x = 0, y = 0) +
+        labs(title = "Efficient Frontier", 
+             x = "Portfolio Risk (Standard Deviation)", 
+             y = "Portfolio Return (Mean)") +
+        theme_tq()
+    
+    ggplotly(g, tooltip = "text")
+    
+}
+
+portfolio_sim_results_tbl %>% plot_efficient_frontier()
 
 
+#### Efficient Frontier #### 
+plot_efficient_frontier <- function(data) {
+    
+    portfolio_metrics_tbl <- data %>%
+        select(return_constraint, portfolio_return, portfolio_stdev)
+    
+    stock_weights_tbl <- data %>%
+        select(-c(return_constraint, portfolio_return, portfolio_stdev))
+    
+    stock_text <- names(stock_weights_tbl) %>%
+        map(~ str_c(.x, stock_weights_tbl %>% pull(.x) %>% scales::percent(),
+                    sep = ": ")) %>%
+        set_names(names(stock_weights_tbl)) %>%
+        as_tibble() %>%
+        mutate(stock_text = str_c(!!! syms(names(stock_weights_tbl)), sep = "\n")) %>%
+        pull(stock_text)
+    
+    
+    g <- portfolio_metrics_tbl %>%
+        mutate(sharpe_ratio = portfolio_return / portfolio_stdev) %>%
+        mutate(label_text = str_glue("Return Objective: {scales::percent(return_constraint)}
+                                     Portfolio Return: {scales::percent(portfolio_return)}
+                                     Portfolio Sharpe: {round(sharpe_ratio, 2)}
+                                     Portfolio StdDev: {round(portfolio_stdev, 2)}
+                                     ---")) %>%
+        mutate(label_text = str_c(label_text, stock_text, sep = "\n")) %>% 
+        
+        ggplot(aes(x = portfolio_stdev, y = portfolio_return, 
+                   color = sharpe_ratio, size = sharpe_ratio)) +
+        geom_point(aes(text = label_text)) +
+        expand_limits(x = 0, y = 0) +
+        labs(title = "Efficient Frontier", 
+             x = "Portfolio Risk (Standard Deviation)", 
+             y = "Portfolio Return (Mean)") +
+        theme_tq()
+    
+    ggplotly(g, tooltip = "text")
+    
+}
 
-
-
-
-
-
-
-
-
+portfolio_sim_result_tbl %>% plot_efficient_frontier()
