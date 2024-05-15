@@ -105,5 +105,55 @@ optimize_portfolio <- function(required_return = 0.4) {
 optimize_portfolio(0.4) 
 
 
+#### Simulation #### 
+tic()
+portfolio_sim_result_tbl  <- seq(.1, .5, lenght.out = 20) %>% 
+    map_dfr(optimize_portfolio)
+toc()
+
+portfolio_sim_result_tbl
+
+#### Visualization #### 
+# Heatmap 
+plot_heatmap <- function(data) {
+    
+    data_transformed_tbl <- data %>%
+        mutate(sharpe_ratio = portfolio_return / portfolio_stdev) %>%
+        mutate(portfolio_id = row_number()) %>%
+        gather(key = stock, value = weight,
+               -sharpe_ratio, -portfolio_return, -portfolio_stdev, 
+               -portfolio_id, -return_constraint,
+               factor_key = TRUE) %>%
+        mutate(return_objective = scales::percent(return_constraint)) %>%
+        mutate(label_text = str_glue("Return Objective: {scales::percent(return_constraint)}
+                                     Portfolio Return: {scales::percent(portfolio_return)}
+                                     Portfolio Sharpe: {round(sharpe_ratio, 2)}
+                                     Portfolio StdDev: {round(portfolio_stdev, 2)}"))
+    
+    g <- data_transformed_tbl %>%
+        ggplot(aes(stock, y = return_objective, fill = weight)) +
+        geom_tile() +
+        geom_point(aes(text = label_text), size = 0.1, alpha = 0) +
+        scale_fill_gradient(low = "#FFFFFF", high = "#2c3e50") +
+        geom_text(aes(label = scales::percent(weight)), size = 3) +
+        theme_tq() +
+        labs(title = "Optimized Portfolio Weights", x = "Stock", y = "Return Objective")
+    
+    ggplotly(g, tooltip = "text")
+    
+}
+
+portfolio_sim_result_tbl %>% plot_heatmap()
+
+
+
+
+
+
+
+
+
+
+
 
 
