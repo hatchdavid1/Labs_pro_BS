@@ -30,9 +30,28 @@ returns_matrix_tbl
 
 
 #### Optimization #### 
+# Static variables 
+cov_mtx  <- cov(returns_matrix_tbl)
 
+stats_tbl  <- stock_return_tbl %>% 
+    summarise(
+        mean = mean(returns), 
+        stdev = sd(returns)
+    )
 
+#### Functions #### 
+calc_portfolio_variance  <- function(weights){
+    t(weights) %*% (cov_mtx %*% weights) %>% as.vector()
+}
 
+calc_portfolio_variance(c(1,0,0,0,0, 0))
+
+calc_portfolio_return  <- function(weights){
+    stats  <- stats_tbl$mean
+    sum(stats * weights)
+}
+
+calc_portfolio_return(c(1,0,0,0,0,0))
 
 
 
