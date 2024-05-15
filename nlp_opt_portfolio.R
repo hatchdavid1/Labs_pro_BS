@@ -76,8 +76,33 @@ sol$objval
 
 solution(sol) %>% round(2)
 
+#### Simulation - Iterative Optimiaztion #### 
+optimize_portfolio <- function(required_return = 0.4) {
+    
+    model_nlp <- OP(
+        objective   = F_objective(F = calc_portfolio_variance, n = n_assets, names = assets),
+        constraints = rbind(
+            F_constraint(F = calc_portfolio_return, dir = ">=", rhs = required_return),
+            L_constraint(diag(n_assets), rep(">=", n_assets), rep(0, n_assets)),
+            L_constraint(diag(n_assets), rep("<=", n_assets), rep(1, n_assets)),
+            L_constraint(rep(1, n_assets), "==", 1)
+        ),
+        maximum = FALSE
+    )
+    
+    sol <- ROI_solve(model_nlp, solver = "alabama", start = rep(1/n_assets, n_assets))
+    
+    return(
+        bind_cols(
+            tibble(return_constraint = required_return),
+            tibble(portfolio_return  = calc_portfolio_return(sol$solution)),
+            tibble(portfolio_stdev   = (sol$objval)^0.5),
+            enframe(sol$solution) %>% spread(key = name, value = value))
+    )
+    
+}
 
-
+optimize_portfolio(0.4) 
 
 
 
