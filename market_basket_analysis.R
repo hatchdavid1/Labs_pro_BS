@@ -129,3 +129,44 @@ g <- user_item_frequency_tbl %>%
          subtitle = "Yes - Some Customers have larger baskets")
 
 ggplotly(g)
+
+#### Condensing User-item / Transaction-item Matriz for evaluation #### 
+# Popular products 
+top_products_vec <- item_frequency_tbl %>% 
+    filter(popular_product == 'Yes') %>% 
+    pull(product_name)
+
+# Filtering by names 
+top_products_basket_vec <- orders_combined_tbl %>%
+    filter(product_name %in% top_products_vec)
+
+# Large Basket 
+top_user_vec  <- user_item_frequency_tbl %>% 
+    filter(rank  < 2500) %>% 
+    pull(user_id)
+
+market_basket_condensed_tbl  <- top_products_basket_vec %>%
+    filter(user_id %in% top_user_vec)
+
+market_basket_condensed_tbl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
