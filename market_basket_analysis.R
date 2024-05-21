@@ -73,3 +73,33 @@ g  <- item_frequency_tbl %>%
          subtitle = "Top Items Account for Majority of Purchases")
 
 ggplotly(g, tooltip = 'text')
+
+
+#### Frequency from customers side #### 
+user_frequency_tbl  <- orders_combined_tbl %>% 
+    distinct(user_id, order_id) %>% 
+    count(user_id) %>% 
+    arrange(desc(n)) %>% 
+    mutate(
+        pct = n/sum(n), 
+        cumulative_pct = cumsum(pct), 
+        popular_customer = ifelse(cumulative_pct  <= .5, "Yes", "No") 
+    ) %>% 
+    rowid_to_column(var = "rank")
+
+user_frequency_tbl
+
+g <- user_frequency_tbl %>%
+    slice(1:5000) %>%
+    ggplot(aes(rank, n)) +
+    geom_point(aes(size = n, color = popular_customer), alpha = 0.2) +
+    theme_tq() +
+    scale_color_tq() +
+    theme(legend.direction = "vertical", 
+          legend.position  = "right") +
+    labs(title = "User Frequency", 
+         subtitle = "How Often Do You Shop? - No Frequency! Everyone is 1st time.")
+
+ggplotly(g)
+
+
