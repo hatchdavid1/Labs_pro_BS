@@ -230,12 +230,60 @@ results_rlab <- eval_recipe %>%
 plot(results_rlab, annotate = TRUE)
 
 
+##### Building Models #### 
+# Association Rules model 
+model_ar <- recommenderlab::Recommender(
+    data = user_item_rlab, 
+    method = "AR", 
+    param = list(supp = 0.01, conf = 0.10))
 
+# UBCF Model 
+model_ucbf <- recommenderlab::Recommender(
+    data = user_item_rlab, 
+    method = "UBCF", 
+    param  = list(method = "Cosine", nn = 500))
 
+#### Checking relationships #### 
+rules <- model_ar@model$rule_base
 
+inspectDT(rules)
 
+plot(rules, method = "scatterplot", 
+     marker = list(opacity = .7, size = ~lift), 
+     colors = c("blue", "green"),
+     engine = "plotly")
 
+sort(rules, by = "lift", decreasing = TRUE)[1:20] %>%
+    inspect() 
 
+plot(rules, method = "graph")
+
+plot(model_ar@model$rule_base, method = "graph", 
+     control=list(layout=igraph::in_circle()))
+
+#### Prediction #### 
+# Preparing data 
+new_user_basket <- c("Banana", "Organic Whole Milk")
+
+new_user_basket_rlab <- tibble(items = user_item_rlab@data %>% colnames()) %>%
+    mutate(value = as.numeric(items %in% new_user_basket)) %>%
+    spread(key = items, value = value) %>%
+    as.matrix() %>%
+    as("binaryRatingMatrix")
+
+new_user_basket_rlab
+
+# Association Rules
+prediction_ar <- predict(model_ar, newdata = new_user_basket_rlab, n = 3)
+
+tibble(items = prediction_ar@itemLabels) %>%
+    slice(prediction_ar@items[[1]])
+
+# UBCF
+prediction_ucbf <- predict(model_ucbf, newdata = new_user_basket_rlab, n = 3)
+
+tibble(items = prediction_ucbf@itemLabels) %>%
+    slice(prediction_ucbf@items[[1]])
 
 
 
