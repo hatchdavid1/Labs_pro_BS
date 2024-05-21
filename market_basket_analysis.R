@@ -206,7 +206,28 @@ results_rlab_arules <- eval_recipe %>%
 plot(results_rlab_arules, annotate = TRUE)
 
 
+# All algorithms 
+algorithms_list <- list(
+    "random items"        = list(name  = "RANDOM",
+                                 param = NULL),
+    "popular items"       = list(name  = "POPULAR",
+                                 param = NULL),
+    "user-based CF"       = list(name  = "UBCF",
+                                 param = list(method = "Cosine", nn = 500)),
+    "item-based CF"       = list(name  = "IBCF",
+                                 param = list(k = 5)),
+    "association rules2"  = list(name  = "AR", 
+                                 param = list(supp = 0.01, conf = 0.1))
+)
 
+
+results_rlab <- eval_recipe %>%
+    recommenderlab::evaluate(
+        method    = algorithms_list, 
+        type      = "topNList", 
+        n         = 1:10)
+
+plot(results_rlab, annotate = TRUE)
 
 
 
