@@ -103,3 +103,29 @@ g <- user_frequency_tbl %>%
 ggplotly(g)
 
 
+##### Products per Customer frequency #### 
+user_item_frequency_tbl <- orders_combined_tbl %>%
+    count(user_id) %>%
+    arrange(desc(n)) %>%
+    mutate(
+        pct = n / sum(n),
+        cumulative_pct = cumsum(pct),
+        popular_customer = ifelse(cumulative_pct <= 0.5, "Yes", "No")
+    ) %>%
+    rowid_to_column(var = "rank") 
+
+
+user_item_frequency_tbl
+
+g <- user_item_frequency_tbl %>%
+    slice(1:10000) %>%
+    ggplot(aes(rank, n)) +
+    geom_point(aes(size = n, color = popular_customer), alpha = 0.2) +
+    theme_tq() +
+    scale_color_tq() +
+    theme(legend.direction = "vertical", 
+          legend.position  = "right") +
+    labs(title = "User Frequency", 
+         subtitle = "Yes - Some Customers have larger baskets")
+
+ggplotly(g)
