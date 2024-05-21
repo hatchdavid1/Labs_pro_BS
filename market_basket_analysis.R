@@ -150,10 +150,60 @@ market_basket_condensed_tbl  <- top_products_basket_vec %>%
 
 market_basket_condensed_tbl
 
+#### Transforming data to a Binary Rating Matrix #####
+# Basket contains item 1 or 0 
 
+user_item_tbl  <- market_basket_condensed_tbl %>% 
+    select(user_id, product_name) %>% 
+    mutate(value = 1) %>% 
+    spread(product_name, value, fill = 0)
 
+user_item_rlab <- user_item_tbl %>% 
+    select(-user_id) %>% 
+    as.matrix() %>% 
+    as('binaryRatingMatrix')
 
+user_item_rlab
 
+# Calculating relationships using arules package 
+user_item_rlab@data
+
+user_item_rlab@data %>% summary()
+
+user_item_rlab@data %>% glimpse()
+
+# "dev.off()"
+itemFrequencyPlot(user_item_rlab@data, topN = 20, type = 'absolute', 
+                  xlab = "Items", ylab = "Frequency (absolute)", 
+                  col = "streetblue", 
+                  main = "Absolute Frequency Plot")
+# Creating recipes 
+recommenderRegistry$get_entries()
+
+eval_recipe <- user_item_rlab %>%
+    evaluationScheme(method = "cross-validation", k = 5, given = -1)
+
+eval_recipe
+
+# Association Rules 
+algorithms_list <- list(
+    "association rules1"   = list(name  = "AR", 
+                                  param = list(supp = 0.01, conf = 0.01)),
+    "association rules2"  = list(name  = "AR", 
+                                 param = list(supp = 0.01, conf = 0.1)),
+    "association rules3"  = list(name  = "AR", 
+                                 param = list(supp = 0.01, conf = 0.5)),
+    "association rules4"  = list(name  = "AR", 
+                                 param = list(supp = 0.1, conf = 0.5))
+)
+
+results_rlab_arules <- eval_recipe %>%
+    recommenderlab::evaluate(
+        method    = algorithms_list, 
+        type      = "topNList", 
+        n         = 1:10)
+
+plot(results_rlab_arules, annotate = TRUE)
 
 
 
